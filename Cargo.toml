@@ -9,3 +9,6 @@ edition = "2021"
 bevy = "0.15.0"
 rand = "*"
 bevy_rapier2d = "*"
+
+[package.metadata.trunk]
+build = "index.html"
