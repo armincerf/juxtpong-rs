@@ -1,10 +1,9 @@
-use bevy::asset::AssetContainer;
 use bevy::prelude::*;
 
 use super::resources::Score;
-use crate::components::constants::*;
 use crate::components::Player;
 use crate::game::GameEvents;
+
 
 #[derive(Component)]
 pub struct ScoreText;

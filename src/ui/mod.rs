@@ -12,6 +12,6 @@ impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Score>()
             .add_systems(Startup, spawn_score)
-            .add_systems(Update, score);
+            .add_systems(PostUpdate, score);
     }
 } 

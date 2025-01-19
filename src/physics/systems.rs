@@ -48,8 +48,8 @@ pub fn spawn_wind_particles(
     
     // Spawn particles across the whole screen
     if rand::thread_rng().gen::<f32>() < 0.1 { // Control particle spawn rate
-        let random_x = rand::thread_rng().gen_range(-WINDOW_WIDTH/2.0..WINDOW_WIDTH/2.0);
-        let random_y = rand::thread_rng().gen_range(-WINDOW_HIGHT/2.0..WINDOW_HIGHT/2.0);
+        let random_x = rand::thread_rng().gen_range(-VIRTUAL_WIDTH/2.0..VIRTUAL_WIDTH/2.0);
+        let random_y = rand::thread_rng().gen_range(-VIRTUAL_HEIGHT/2.0..VIRTUAL_HEIGHT/2.0);
         
         commands.spawn((
             Sprite {
@@ -94,7 +94,7 @@ pub fn update_wind_particles(
         
         // Remove if lifetime is over or particle moves off screen
         if particle.lifetime.finished() || 
-           transform.translation.x.abs() > WINDOW_WIDTH/2.0 {
+           transform.translation.x.abs() > VIRTUAL_WIDTH/2.0 {
             commands.entity(entity).despawn();
         }
     }

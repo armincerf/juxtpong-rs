@@ -16,7 +16,7 @@ impl Plugin for PhysicsPlugin {
         app.add_systems(Update, (
             apply_wind,
             spawn_wind_particles,
-            update_wind_particles,
-        ));
+        ).chain())
+        .add_systems(Update, update_wind_particles.after(spawn_wind_particles));
     }
 } 

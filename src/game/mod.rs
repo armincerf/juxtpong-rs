@@ -20,8 +20,8 @@ impl Plugin for GamePlugin {
             .add_systems(Update, (
                 move_paddle,
                 detect_reset,
-                ball_hit,
-            ))
+            ).chain())
+            .add_systems(Update, ball_hit.after(detect_reset))
             .add_systems(PostUpdate, reset_ball);
     }
 } 

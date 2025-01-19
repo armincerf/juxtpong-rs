@@ -2,96 +2,97 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use rand::Rng;
 
-use crate::components::{Ball, BallBundle, Paddle, Player};
+use crate::components::{Ball, BallBundle, Paddle, Player, GameCamera};
 use crate::components::constants::*;
 use super::events::GameEvents;
 
 pub fn spawn_camera(mut commands: Commands) {
-    commands.spawn(Camera2d::default());
+    commands.spawn((
+        Camera2d,
+        GameCamera,
+    ));
 }
 
 pub fn spawn_border(mut commands: Commands) {
-    // Top wall
+    // Left wall
     commands.spawn((
-        Transform::from_translation(Vec3::new(0., WINDOW_HIGHT / 2., 0.)),
+        Transform::from_translation(Vec3::new(-VIRTUAL_WIDTH / 2., 0., 0.)),
         Visibility::default(),
         RigidBody::Fixed,
-        Collider::cuboid(WINDOW_WIDTH / 2., 3.),
+        Collider::cuboid(3., VIRTUAL_HEIGHT / 2.),
     ));
 
-    // Bottom wall
+    // Right wall
     commands.spawn((
-        Transform::from_translation(Vec3::new(0., -WINDOW_HIGHT / 2., 0.)),
+        Transform::from_translation(Vec3::new(VIRTUAL_WIDTH / 2., 0., 0.)),
         Visibility::default(),
         RigidBody::Fixed,
-        Collider::cuboid(WINDOW_WIDTH / 2., 3.),
+        Collider::cuboid(3., VIRTUAL_HEIGHT / 2.),
     ));
 
-    // Right goal
+    // Top goal (Player 1)
     commands.spawn((
-        Transform::from_translation(Vec3::new(WINDOW_WIDTH / 2., 0., 0.)),
+        Transform::from_translation(Vec3::new(0., VIRTUAL_HEIGHT / 2., 0.)),
         Visibility::default(),
         RigidBody::Fixed,
-        Collider::cuboid(3., WINDOW_HIGHT / 2.),
+        Collider::cuboid(VIRTUAL_WIDTH / 2., 3.),
         Player::Player1,
         Sensor,
     ));
 
-    // Left goal
+    // Bottom goal (Player 2)
     commands.spawn((
-        Transform::from_translation(Vec3::new(-WINDOW_WIDTH / 2., 0., 0.)),
+        Transform::from_translation(Vec3::new(0., -VIRTUAL_HEIGHT / 2., 0.)),
         Visibility::default(),
         RigidBody::Fixed,
-        Collider::cuboid(3., WINDOW_HIGHT / 2.),
+        Collider::cuboid(VIRTUAL_WIDTH / 2., 3.),
         Player::Player2,
         Sensor,
     ));
 }
 
 pub fn spawn_players(mut commands: Commands) {
-    // Left paddle (Player 1)
+    // Top paddle (Player 1)
     commands.spawn((
         Sprite {
             color: Player::Player1.get_color(),
-            custom_size: Some(Vec2::new(PADDLE_WIDTH * 2.0, PADDLE_HEIGHT)),
-            flip_x: false,
+            custom_size: Some(Vec2::new(PADDLE_HEIGHT, PADDLE_WIDTH * 2.0)),
+            flip_y: false,
             ..default()
         },
         Transform {
-            translation: Vec3::new(-WINDOW_WIDTH / 2. + PADDLE_WIDTH * 2.0, 0., 0.),
-            rotation: Quat::from_rotation_z(std::f32::consts::PI / 2.0),
+            translation: Vec3::new(0., VIRTUAL_HEIGHT / 2. - PADDLE_WIDTH * 2.0, 0.),
             ..default()
         },
         Player::Player1,
         Paddle::player1(),
         RigidBody::KinematicPositionBased,
         Collider::triangle(
-            Vec2::new(-PADDLE_WIDTH, -PADDLE_HEIGHT/2.),
-            Vec2::new(-PADDLE_WIDTH, PADDLE_HEIGHT/2.),
-            Vec2::new(PADDLE_WIDTH, 0.0),
+            Vec2::new(-PADDLE_HEIGHT/2., PADDLE_WIDTH),
+            Vec2::new(PADDLE_HEIGHT/2., PADDLE_WIDTH),
+            Vec2::new(0.0, -PADDLE_WIDTH),
         ),
     ));
 
-    // Right paddle (Player 2)
+    // Bottom paddle (Player 2)
     commands.spawn((
         Sprite {
             color: Player::Player2.get_color(),
-            custom_size: Some(Vec2::new(PADDLE_WIDTH * 2.0, PADDLE_HEIGHT)),
-            flip_x: true,
+            custom_size: Some(Vec2::new(PADDLE_HEIGHT, PADDLE_WIDTH * 2.0)),
+            flip_y: true,
             ..default()
         },
         Transform {
-            translation: Vec3::new(WINDOW_WIDTH / 2. - PADDLE_WIDTH * 2.0, 0., 0.),
-            rotation: Quat::from_rotation_z(-std::f32::consts::PI / 2.0),
+            translation: Vec3::new(0., -VIRTUAL_HEIGHT / 2. + PADDLE_WIDTH * 2.0, 0.),
             ..default()
         },
         Player::Player2,
         Paddle::player2(),
         RigidBody::KinematicPositionBased,
         Collider::triangle(
-            Vec2::new(PADDLE_WIDTH, -PADDLE_HEIGHT/2.),
-            Vec2::new(PADDLE_WIDTH, PADDLE_HEIGHT/2.),
-            Vec2::new(-PADDLE_WIDTH, 0.0),
+            Vec2::new(-PADDLE_HEIGHT/2., -PADDLE_WIDTH),
+            Vec2::new(PADDLE_HEIGHT/2., -PADDLE_WIDTH),
+            Vec2::new(0.0, PADDLE_WIDTH),
         ),
     ));
 }
@@ -106,20 +107,20 @@ pub fn move_paddle(
     time: Res<Time>,
 ) {
     for (mut pos, settings) in &mut paddles {
-        if input.pressed(settings.move_up) {
-            pos.translation.y += PADDLE_SPEED * time.delta_secs();
-            pos.translation.y = pos
+        if input.pressed(settings.move_right) {
+            pos.translation.x += PADDLE_SPEED * time.delta_secs();
+            pos.translation.x = pos
                 .translation
-                .y
-                .clamp((-WINDOW_HIGHT / 2.) + PADDLE_HEIGHT/2., (WINDOW_HIGHT / 2.) - PADDLE_HEIGHT/2.);
+                .x
+                .clamp((-VIRTUAL_WIDTH / 2.) + PADDLE_HEIGHT/2., (VIRTUAL_WIDTH / 2.) - PADDLE_HEIGHT/2.);
         }
 
-        if input.pressed(settings.move_down) {
-            pos.translation.y -= PADDLE_SPEED * time.delta_secs();
-            pos.translation.y = pos
+        if input.pressed(settings.move_left) {
+            pos.translation.x -= PADDLE_SPEED * time.delta_secs();
+            pos.translation.x = pos
                 .translation
-                .y
-                .clamp((-WINDOW_HIGHT / 2.) + PADDLE_HEIGHT/2., (WINDOW_HIGHT / 2.) - PADDLE_HEIGHT/2.);
+                .x
+                .clamp((-VIRTUAL_WIDTH / 2.) + PADDLE_HEIGHT/2., (VIRTUAL_WIDTH / 2.) - PADDLE_HEIGHT/2.);
         }
     }
 }
@@ -133,9 +134,9 @@ pub fn ball_hit(
             if let Ok(player) = paddles.get(hit) {
                 sprite.color = player.get_color();
                 velocity.angvel = 5.0;
-                let random_y = rand::thread_rng().gen_range(-100.0..100.0);
-                velocity.linvel.y = random_y;
-                velocity.linvel.x = if player == &Player::Player1 { BALL_SPEED } else { -BALL_SPEED };
+                let random_x = rand::thread_rng().gen_range(-100.0..100.0);
+                velocity.linvel.x = random_x;
+                velocity.linvel.y = if player == &Player::Player1 { -BALL_SPEED } else { BALL_SPEED };
                 ball.time_since_hit = 0.0;
                 return;
             }
