@@ -13,24 +13,24 @@ pub fn apply_wind(
         // Increment time since last hit
         ball.time_since_hit += time.delta().as_secs_f32();
         
-        let x = transform.translation.x;
-        let direction = if x > 0.0 { 1.0 } else { -1.0 };
+        let y = transform.translation.y;
+        let direction = if y > 0.0 { 1.0 } else { -1.0 };
         
         // Calculate exponential force based on time since last hit
         let force = WIND_BASE_FORCE * 
             (WIND_GROWTH_RATE.powf(ball.time_since_hit / WIND_TIME_SCALE))
                 .min(WIND_MAX_MULTIPLIER);
         
-        external_force.force = Vec2::new(direction * force, 0.0);
+        external_force.force = Vec2::new(0.0, direction * force);
 
         // Cap the ball's velocity while preserving direction
         if velocity.linvel.length() > MAX_BALL_SPEED {
             velocity.linvel = velocity.linvel.normalize() * MAX_BALL_SPEED;
         }
 
-        // Add minimum horizontal velocity in wind direction to prevent pure vertical bouncing
-        if velocity.linvel.x.abs() < MIN_HORIZONTAL_SPEED {
-            velocity.linvel.x = direction * MIN_HORIZONTAL_SPEED;
+        // Add minimum vertical velocity in wind direction to prevent pure horizontal bouncing
+        if velocity.linvel.y.abs() < MIN_BALL_SPEED {
+            velocity.linvel.y = direction * MIN_BALL_SPEED;
         }
     }
 }
@@ -41,7 +41,7 @@ pub fn spawn_wind_particles(
 ) {
     // Get wind direction based on ball position
     let direction = if let Some(ball_transform) = ball_query.iter().next() {
-        if ball_transform.translation.x > 0.0 { 1.0 } else { -1.0 }
+        if ball_transform.translation.y > 0.0 { 1.0 } else { -1.0 }
     } else {
         return; // No ball found
     };
@@ -53,12 +53,12 @@ pub fn spawn_wind_particles(
         
         commands.spawn((
             Sprite {
-                color: Color::srgba(0.5, 0.8, 1.0, 1.0),
-                custom_size: Some(Vec2::new(15.0, 2.0)),
+                color: Color::srgba(1.0, 0.8, 0.2, 1.0),
+                custom_size: Some(Vec2::new(1.0, 5.0)),
                 ..default()
             },
             Transform::from_translation(Vec3::new(random_x, random_y, 0.0))
-                .with_rotation(Quat::from_rotation_z(if direction > 0.0 { 0.0 } else { std::f32::consts::PI })),
+                .with_rotation(Quat::from_rotation_z(if direction > 0.0 { std::f32::consts::PI * 0.5 } else { -std::f32::consts::PI * 0.5 })),
             WindParticle::new(direction),
         ));
     }
@@ -72,7 +72,7 @@ pub fn update_wind_particles(
 ) {
     // Get current wind direction from ball position
     let direction = if let Some(ball_transform) = ball_query.iter().next() {
-        if ball_transform.translation.x > 0.0 { 1.0 } else { -1.0 }
+        if ball_transform.translation.y > 0.0 { 1.0 } else { -1.0 }
     } else {
         return; // No ball found
     };
@@ -85,8 +85,8 @@ pub fn update_wind_particles(
         
         // Move particle
         let speed = 200.0;
-        transform.translation.x += particle.direction * speed * time.delta().as_secs_f32();
-        transform.rotation = Quat::from_rotation_z(if direction > 0.0 { 0.0 } else { std::f32::consts::PI });
+        transform.translation.y += particle.direction * speed * time.delta().as_secs_f32();
+        transform.rotation = Quat::from_rotation_z(if direction > 0.0 { std::f32::consts::PI * 0.5 } else { -std::f32::consts::PI * 0.5 });
         
         // Fade out
         let alpha = 1.0 - particle.lifetime.elapsed_secs() / particle.lifetime.duration().as_secs_f32();
@@ -94,7 +94,7 @@ pub fn update_wind_particles(
         
         // Remove if lifetime is over or particle moves off screen
         if particle.lifetime.finished() || 
-           transform.translation.x.abs() > VIRTUAL_WIDTH/2.0 {
+           transform.translation.y.abs() > VIRTUAL_HEIGHT/2.0 {
             commands.entity(entity).despawn();
         }
     }

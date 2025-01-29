@@ -15,8 +15,8 @@ pub enum Player {
 impl Player {
     pub fn start_speed(&self) -> Velocity {
         match self {
-            Player::Player1 => Velocity::linear(Vec2::new(BALL_SPEED, 0.)),
-            Player::Player2 => Velocity::linear(Vec2::new(-BALL_SPEED, 0.)),
+            Player::Player1 => Velocity::linear(Vec2::new(0., BALL_SPEED)),
+            Player::Player2 => Velocity::linear(Vec2::new(0., -BALL_SPEED)),
         }
     }
 

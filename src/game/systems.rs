@@ -52,49 +52,54 @@ pub fn spawn_border(mut commands: Commands) {
 }
 
 pub fn spawn_players(mut commands: Commands) {
-    // Top paddle (Player 1)
-    commands.spawn((
-        Sprite {
-            color: Player::Player1.get_color(),
-            custom_size: Some(Vec2::new(PADDLE_HEIGHT, PADDLE_WIDTH * 2.0)),
-            flip_y: false,
-            ..default()
-        },
-        Transform {
-            translation: Vec3::new(0., VIRTUAL_HEIGHT / 2. - PADDLE_WIDTH * 2.0, 0.),
-            ..default()
-        },
-        Player::Player1,
-        Paddle::player1(),
-        RigidBody::KinematicPositionBased,
-        Collider::triangle(
-            Vec2::new(-PADDLE_HEIGHT/2., PADDLE_WIDTH),
-            Vec2::new(PADDLE_HEIGHT/2., PADDLE_WIDTH),
-            Vec2::new(0.0, -PADDLE_WIDTH),
-        ),
-    ));
+    // Helper function to create paddle vertices based on player
+    let create_paddle_vertices = |is_player1: bool| {
+        let (base_y, tip_y) = if is_player1 {
+            (PADDLE_WIDTH, -PADDLE_WIDTH)
+        } else {
+            (-PADDLE_WIDTH, PADDLE_WIDTH)
+        };
+        
+        vec![
+            Vec2::new(-PADDLE_HEIGHT/2., base_y),
+            Vec2::new(PADDLE_HEIGHT/2., base_y),
+            Vec2::new(0.0, tip_y),
+        ]
+    };
 
-    // Bottom paddle (Player 2)
-    commands.spawn((
-        Sprite {
-            color: Player::Player2.get_color(),
-            custom_size: Some(Vec2::new(PADDLE_HEIGHT, PADDLE_WIDTH * 2.0)),
-            flip_y: true,
-            ..default()
-        },
-        Transform {
-            translation: Vec3::new(0., -VIRTUAL_HEIGHT / 2. + PADDLE_WIDTH * 2.0, 0.),
-            ..default()
-        },
-        Player::Player2,
-        Paddle::player2(),
-        RigidBody::KinematicPositionBased,
-        Collider::triangle(
-            Vec2::new(-PADDLE_HEIGHT/2., -PADDLE_WIDTH),
-            Vec2::new(PADDLE_HEIGHT/2., -PADDLE_WIDTH),
-            Vec2::new(0.0, PADDLE_WIDTH),
-        ),
-    ));
+    // Helper function to spawn a paddle
+    let spawn_paddle = |commands: &mut Commands, player: Player| {
+        let is_player1 = matches!(player, Player::Player1);
+        let vertices = create_paddle_vertices(is_player1);
+        let y_pos = if is_player1 {
+            VIRTUAL_HEIGHT / 2. - PADDLE_WIDTH * 2.0
+        } else {
+            -VIRTUAL_HEIGHT / 2. + PADDLE_WIDTH * 2.0
+        };
+
+        commands.spawn((
+            Sprite {
+                color: player.get_color(),
+                custom_size: None, // Remove custom_size to use mesh instead
+                flip_y: !is_player1,
+                ..default()
+            },
+            Transform {
+                translation: Vec3::new(0., y_pos, 0.),
+                ..default()
+            },
+            player,
+            if is_player1 { Paddle::player1() } else { Paddle::player2() },
+            RigidBody::KinematicPositionBased,
+            Collider::triangle(vertices[0], vertices[1], vertices[2]),
+            Friction::coefficient(0.8), // Add significant friction to affect ball spin
+            Restitution::coefficient(1.0), // Make sure the ball bounces fully
+        ));
+    };
+
+    // Spawn both paddles
+    spawn_paddle(&mut commands, Player::Player1);
+    spawn_paddle(&mut commands, Player::Player2);
 }
 
 pub fn spawn_ball(mut commands: Commands) {
@@ -133,10 +138,21 @@ pub fn ball_hit(
         for hit in hits.iter() {
             if let Ok(player) = paddles.get(hit) {
                 sprite.color = player.get_color();
-                velocity.angvel = 5.0;
-                let random_x = rand::thread_rng().gen_range(-100.0..100.0);
-                velocity.linvel.x = random_x;
-                velocity.linvel.y = if player == &Player::Player1 { -BALL_SPEED } else { BALL_SPEED };
+                // Add spin but preserve the existing velocity
+                velocity.angvel = 10.0; // Increased spin
+                // Add some random horizontal variation while preserving the current speed
+                let current_speed = velocity.linvel.length();
+                let random_factor = rand::thread_rng().gen_range(0.8..1.2);
+                velocity.linvel = velocity.linvel * random_factor;
+                // Normalize and maintain the original speed
+                velocity.linvel = velocity.linvel.normalize() * current_speed;
+                // Ensure minimum vertical velocity after bounce while preserving direction
+                let min_y_vel = BALL_SPEED * 0.5;
+                if velocity.linvel.y.abs() < min_y_vel {
+                    velocity.linvel.y = if velocity.linvel.y > 0.0 { min_y_vel } else { -min_y_vel };
+                    // Re-normalize to maintain speed after adjusting y velocity
+                    velocity.linvel = velocity.linvel.normalize() * current_speed;
+                }
                 ball.time_since_hit = 0.0;
                 return;
             }
